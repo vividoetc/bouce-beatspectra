@@ -21,7 +21,7 @@ pygame.mixer.music.load(audio_file_path)
 pygame.mixer.music.play()
 
 # Visual elements
-circles = [{'position': (width // 2, height // 2), 'radius': 30, 'color': (255, 255, 255)}]
+circles = [{'position': (width // 2, height // 2), 'radius': 30, 'color': (255, 255, 255), 'scale': 1.0}]
 
 # Beat detection parameters
 onset_env = librosa.onset.onset_strength(y=y, sr=sr)
@@ -42,25 +42,44 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
+        # Change color on every detected beat with animation
+        if event.type == pygame.USEREVENT:
+            for circle in circles:
+                # Generate a random color for the beat
+                target_color = (np.random.randint(0, 255), np.random.randint(0, 255), np.random.randint(0, 255))
+
+                # Animate the color change over 0.5 seconds (adjust duration as needed)
+                pygame.time.set_timer(pygame.USEREVENT, 0)  # Disable the timer
+                circle['color'] = target_color
+
+                # Animate scaling on beat
+                circle['scale'] = 1.5  # Increase scale on beat
+                pygame.time.set_timer(pygame.USEREVENT + 1, 300)  # Set a timer to reset scale after 300 milliseconds
+
+        # Reset scale after scaling animation
+        if event.type == pygame.USEREVENT + 1:
+            for circle in circles:
+                circle['scale'] = 1.0
+
     # Clear the screen
     screen.fill((0, 0, 0))
 
     # Simple beat detection using librosa's onset detection function
     onset_env = librosa.onset.onset_strength(y=y, sr=sr)
     beat_frames = librosa.time_to_frames(beats, sr=sr)
-    
+
     # Change color on every detected beat
     if beat_counter < len(beat_frames) and pygame.mixer.music.get_pos() >= librosa.frames_to_time(beat_frames[beat_counter], sr=sr) * 1000:
         print(f"Beat detected! Total beats: {beat_counter + 1}")
         beat_counter += 1
 
-        for circle in circles:
-            # Change color on beat
-            circle['color'] = (np.random.randint(0, 255), np.random.randint(0, 255), np.random.randint(0, 255))
+        # Set a timer event for 0.5 seconds
+        pygame.time.set_timer(pygame.USEREVENT, 500)
 
-    # Draw circles
+    # Draw circles with scaling
     for circle in circles:
-        pygame.draw.circle(screen, circle['color'], circle['position'], circle['radius'])
+        scaled_radius = int(circle['radius'] * circle['scale'])
+        pygame.draw.circle(screen, circle['color'], circle['position'], scaled_radius)
 
     # Draw loading bar background (shaded portion)
     pygame.draw.rect(screen, loading_bar_bg_color, (loading_bar_position[0], loading_bar_position[1], loading_bar_width, loading_bar_height))
